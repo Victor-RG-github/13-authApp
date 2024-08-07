@@ -1,7 +1,12 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { catchError, map, Observable, tap, throwError } from 'rxjs';
-import { User, AuthStatus, SignInResponse } from '../interfaces';
+import { catchError, map, Observable, of, tap, throwError } from 'rxjs';
+import {
+  User,
+  AuthStatus,
+  SignInResponse,
+  CheckTokenResponse,
+} from '../interfaces';
 import { environment } from '../../../environments/environments';
 
 @Injectable({
@@ -21,16 +26,37 @@ export class AuthService {
     const url = `${this.baseUrl}/auth/sign-in`;
     const body = { email, password };
     return this.http.post<SignInResponse>(url, body).pipe(
-      tap(({ user, token }) => {
-        this._currentUser.set(user);
-        this._authStatus.set(AuthStatus.authenticated);
-        localStorage.setItem('auth-token', token);
-        console.log({ user, token });
+      map(({ user, token }) => {
+        return this.setAuthentication(user, token);
       }),
-      map(() => true),
       catchError((err) => {
         return throwError(() => err.error.message);
       })
     );
+  }
+
+  checkAuthStatus(): Observable<boolean> {
+    const url = `${this.baseUrl}/auth/check-token`;
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      return of(false);
+    }
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.get<CheckTokenResponse>(url, { headers }).pipe(
+      map(({ user, token }) => {
+        return this.setAuthentication(user, token);
+      }),
+      catchError((err) => {
+        this._authStatus.set(AuthStatus.notAuthenticated);
+        return of(false);
+      })
+    );
+  }
+
+  private setAuthentication(user: User, token: string): boolean {
+    this._currentUser.set(user);
+    this._authStatus.set(AuthStatus.authenticated);
+    localStorage.setItem('auth-token', token);
+    return true;
   }
 }
