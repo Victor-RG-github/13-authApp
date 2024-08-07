@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { map, Observable, tap } from 'rxjs';
+import { catchError, map, Observable, tap, throwError } from 'rxjs';
 import { User, AuthStatus, SignInResponse } from '../interfaces';
 import { environment } from '../../../environments/environments';
 
@@ -27,9 +27,10 @@ export class AuthService {
         localStorage.setItem('auth-token', token);
         console.log({ user, token });
       }),
-      map(() => true)
-
-      //TODO Errores
+      map(() => true),
+      catchError((err) => {
+        return throwError(() => err.error.message);
+      })
     );
   }
 }
