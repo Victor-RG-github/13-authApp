@@ -22,6 +22,10 @@ export class AuthService {
   currentUser = computed(this._currentUser);
   authStatus = computed(this._authStatus);
 
+  constructor() {
+    this.checkAuthStatus().subscribe();
+  }
+
   login(email: string, password: string): Observable<boolean> {
     const url = `${this.baseUrl}/auth/sign-in`;
     const body = { email, password };
@@ -37,8 +41,9 @@ export class AuthService {
 
   checkAuthStatus(): Observable<boolean> {
     const url = `${this.baseUrl}/auth/check-token`;
-    const token = localStorage.getItem('auth-token');
+    const token = localStorage.getItem('token');
     if (!token) {
+      this.logout();
       return of(false);
     }
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
@@ -56,7 +61,13 @@ export class AuthService {
   private setAuthentication(user: User, token: string): boolean {
     this._currentUser.set(user);
     this._authStatus.set(AuthStatus.authenticated);
-    localStorage.setItem('auth-token', token);
+    localStorage.setItem('token', token);
     return true;
+  }
+
+  logout() {
+    localStorage.removeItem('token');
+    this._authStatus.set(AuthStatus.notAuthenticated);
+    this._currentUser.set(null);
   }
 }

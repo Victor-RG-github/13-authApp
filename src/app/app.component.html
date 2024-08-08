@@ -1,1 +1,4 @@
-<router-outlet />
+<h1 *ngIf="!finishedAuthCheck(); else authenticated">Loading</h1>
+<ng-template #authenticated>
+  <router-outlet />
+</ng-template>
